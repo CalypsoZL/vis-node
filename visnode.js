@@ -15,7 +15,7 @@ var VisNode = /** @class */ (function () {
         this.distributeCharge();
     };
     VisNode.prototype.decay = function () {
-        this.charge -= this.charge * this.decayRate;
+        this.charge -= max(this.charge * this.decayRate, 0);
     }
     VisNode.prototype.distributeCharge = function () {
         if (this.charge < this.threshold) {
