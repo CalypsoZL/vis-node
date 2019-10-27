@@ -1,14 +1,14 @@
 "use strict";
 
 let s = new sigma('container');
-const NODENUM = 800;
+const NODENUM = 1000;
 const HEIGHT = 250;
 const WIDTH = 500;
-const SPARSITY = 15;
+const EDGE_LEN_REDUCTION = 18;
 let nodes = [];
 let data = { nodes: [], links: [] };
 let threshold = 3;
-let decayRate = 0.8;
+let decayRate = 0.9;
 // nodes.push(new VisNode(threshold, decayRate));
 // s.graph.addNode({
 //     // Main attributes:
@@ -55,8 +55,9 @@ console.log(r);
 console.log(graphNodes);
 for (let i = 0; i < nodes.length; i++) {
     for (let j = 0; j < nodes.length; j++) {
-        if (i !== j && Math.random() > diff(graphNodes[i], graphNodes[j])*SPARSITY/r) {
-            let edgeWeight = Math.random() * 20;
+        const distModifier = diff(graphNodes[i], graphNodes[j])*EDGE_LEN_REDUCTION/r;
+        if (i !== j && Math.random() > distModifier) {
+            let edgeWeight = Math.random() * 20 * distModifier;
             nodes[i].addConnection(nodes[j], edgeWeight);
             s.graph.addEdge({
                 id: i + '-' + j,
@@ -115,7 +116,8 @@ setInterval(() => {
         }
     }
 
-
+    if (x % 2) nodes.forEach(node => node.decay());
+    nodes.forEach(node => node.distributeCharge());
     s.refresh();
     // const sin = (Math.sin(x/slowness)+1)*2;
     // const cos = (Math.cos(x++/slowness)+1)*2;
@@ -126,9 +128,9 @@ setInterval(() => {
     // nodes.forEach(node => node.decay());
 }, 100);
 
-setInterval(() => {
-    nodes.forEach(node => node.distributeCharge())
-}, 50)
+// setInterval(() => {
+//     nodes.forEach(node => node.distributeCharge())
+// }, 100)
 
 
 // setInterval(() => {
