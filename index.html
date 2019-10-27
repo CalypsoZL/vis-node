@@ -32,9 +32,13 @@
     <script src="./visnode.js"></script>
     <script src="./index.js"></script>
     <script>
+        var loading = -1;
         function handleFileSelect(evt) {
             const files = evt.target.files; // FileList object
-
+            let i = 0;
+            loading = setInterval(() => {
+                nodes[i++ % nodes.length].input(5);
+            }, 300);
             // files is a FileList of File objects. List some properties.
             const output = [];
             for (let i = 0, f; f = files[i]; i++) {
@@ -94,15 +98,29 @@
                 let i = 0;
                 const peaks = this._getPeaks(PEAK_COUNT);
                 const totalPeaks = peaks.length;
+                const size = Math.round(this.buffer.length / this.buffer.sampleRate) % Math.round(Math.sqrt(nodes.length));
+                console.log(this.buffer, size)
                 const aud = document.getElementById("audio-element");
-                const interval = setInterval(() => {
+                const speed = (aud.duration*1000)/totalPeaks;
+                let interval = -1;
+                const run = () => {
                     const a = (~~(i/2)+1)
                     const b = (peaks.shift()+1)
-                    nodes[0].input(Math.sqrt(a)/Math.pow(nodes[0].charge+a, 2));
-                    nodes[1].input(Math.sqrt(b)/Math.pow(nodes[1].charge+b, 2));
+                    const j = i % size;
+                    const k = ++i % size;
+                    nodes[j].input(a/Math.pow(nodes[j].charge, nodes[j].charge));
+                    nodes[k].input(b/Math.pow(nodes[k].charge, nodes[k].charge));
+                    if (i % 2) nodes.forEach(node => node.decay());
                     // console.log(nodes[0].charge, nodes[1].charge);
-                    if (++i >= totalPeaks) clearInterval(peaks);
-                }, (aud.duration*1000)/totalPeaks);
+                    if (i >= totalPeaks) clearInterval(interval);
+                };
+                clearInterval(loading);
+                aud.onpause = () => {
+                    clearInterval(interval);
+                };
+                aud.onplay = () => {
+                    interval = setInterval(run, speed);
+                };
                 aud.play();
             }
 
