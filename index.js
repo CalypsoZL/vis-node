@@ -104,7 +104,7 @@ s.refresh();
 // nodes[1].input(50);
 
 let x = 0;
-const decayInterval = Math.round(Math.sqrt(nodes.length));
+const decayInterval = Math.round(Math.pow(nodes.length, 1/4));
 console.log(decayInterval, "decayInterval");
 
 setInterval(() => {
