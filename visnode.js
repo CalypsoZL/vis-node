@@ -65,7 +65,7 @@ var VisNode = /** @class */ (function () {
     };
     VisNode.prototype.decayEdges = function () {
         for (var i = 0; i < this.edges.length; i++) {
-            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) / this.edgeDecayReduction, 0);
+            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) / (this.edgeDecayReduction/5), 0);
         }
     };
     VisNode.prototype.growEdges = function () {
@@ -75,7 +75,7 @@ var VisNode = /** @class */ (function () {
             reduceDecay += this.edges[i] > 100;
         }
         if (reduceDecay) {
-            this.decayRate -= clamp(Math.sqrt(this.decayRate, 2), 0, this.decayRate - 0.01)
+            this.decayRate -= clamp(Math.sqrt(this.decayRate, 2), 0, this.decayRate)
         }
     };
     VisNode.prototype.input = function (charge) {

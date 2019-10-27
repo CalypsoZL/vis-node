@@ -1,10 +1,10 @@
 "use strict";
 
 let s = new sigma('container');
-const NODENUM = 1000;
+const NODENUM = 1500;
 const HEIGHT = 250;
 const WIDTH = 400;
-const EDGE_LEN_REDUCTION = 16;
+const EDGE_LEN_REDUCTION = 22;
 let nodes = [];
 let data = { nodes: [], links: [] };
 let threshold = 3;
@@ -72,7 +72,7 @@ for (let i = 0; i < nodes.length; i++) {
 const minNodeSize = 1;
 const maxNodeSize = 5;
 const minEdgeSize = 0.1;
-const maxEdgeSize = 3;
+const maxEdgeSize = 2;
 s.settings({
     minNodeSize: minNodeSize,
     maxNodeSize: maxNodeSize,
@@ -106,7 +106,9 @@ s.refresh();
 let x = 0;
 const decayInterval = Math.round(Math.pow(nodes.length, 1/4));
 console.log(decayInterval, "decayInterval");
-
+s.bind('clickNode',(e) => {
+    nodes[e.data.node.id].input(10);
+});
 setInterval(() => {
     const graphNodes = s.graph.nodes()
     const graphEdges = s.graph.edges()
