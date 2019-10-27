@@ -1,21 +1,22 @@
 "use strict";
 
 var MAXCHARGE = 100;
-var EDGE_DECAY_RATE = 0.2;
+// var EDGE_DECAY_RATE = 0.2;
 var VisNode = /** @class */ (function () {
-    function VisNode(threshold, decayRate, startingCharge) {
+    function VisNode(threshold, decayRate, startingCharge, edgeDecayReduction=50) {
         if (startingCharge === void 0) { startingCharge = 0; }
         this.children = [];
         this.edges = [];
         this.threshold = threshold;
         this.decayRate = decayRate;
         this.charge = startingCharge;
+        this.edgeDecayReduction = clamp(edgeDecayReduction, 0, 200);
     }
     VisNode.prototype.tick = function () {
         this.distributeCharge();
     };
     VisNode.prototype.decay = function () {
-        this.charge -= max(this.charge * this.decayRate, 0);
+        this.charge = clamp(this.charge - this.charge * this.decayRate, 0.1,  this.charge);
     }
     VisNode.prototype.distributeCharge = function () {
         if (this.charge < this.threshold) {
@@ -64,17 +65,17 @@ var VisNode = /** @class */ (function () {
     };
     VisNode.prototype.decayEdges = function () {
         for (var i = 0; i < this.edges.length; i++) {
-            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]), 0);
+            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) / this.edgeDecayReduction, 0);
         }
     };
     VisNode.prototype.growEdges = function () {
         let reduceDecay = false;
         for (var i = 0; i < this.edges.length; i++) {
-            this.edges[i] = this.edges[i] + 100 * Math.sqrt(this.children[i].charge);
+            this.edges[i] = this.edges[i] + (100/this.edgeDecayReduction)*Math.sqrt(this.children[i].charge);
             reduceDecay += this.edges[i] > 100;
         }
         if (reduceDecay) {
-            this.decayRate -= Math.pow(this.decayRate, 2)
+            this.decayRate -= clamp(Math.sqrt(this.decayRate, 2), 0, this.decayRate - 0.01)
         }
     };
     VisNode.prototype.input = function (charge) {
@@ -97,4 +98,8 @@ function max(a, b) {
     if (a > b)
         return a;
     return b;
+}
+
+function clamp(a, n, x) {
+    return max(min(a, x), n);
 }

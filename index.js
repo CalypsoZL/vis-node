@@ -3,12 +3,12 @@
 let s = new sigma('container');
 const NODENUM = 1000;
 const HEIGHT = 250;
-const WIDTH = 500;
-const EDGE_LEN_REDUCTION = 18;
+const WIDTH = 400;
+const EDGE_LEN_REDUCTION = 16;
 let nodes = [];
 let data = { nodes: [], links: [] };
 let threshold = 3;
-let decayRate = 0.7;
+let decayRate = 0.3;
 // nodes.push(new VisNode(threshold, decayRate));
 // s.graph.addNode({
 //     // Main attributes:
@@ -35,7 +35,7 @@ let decayRate = 0.7;
 
 for (let i = 0; i < NODENUM; i++) {
     // let threshold = Math.random() * 20+1;
-    nodes.push(new VisNode(threshold, Math.random() * decayRate, 1));
+    nodes.push(new VisNode(threshold, Math.random() * decayRate, 1, 40));
     s.graph.addNode({
         // Main attributes:
         id: i,
@@ -57,7 +57,7 @@ for (let i = 0; i < nodes.length; i++) {
     for (let j = 0; j < nodes.length; j++) {
         const distModifier = diff(graphNodes[i], graphNodes[j])*EDGE_LEN_REDUCTION/r;
         if (i !== j && Math.random() > distModifier) {
-            let edgeWeight = Math.random() * 20 * distModifier;
+            let edgeWeight = Math.random() * 50 * distModifier;
             nodes[i].addConnection(nodes[j], edgeWeight);
             s.graph.addEdge({
                 id: i + '-' + j,
@@ -146,6 +146,4 @@ function diff(a, b) {
     return Math.sqrt(Math.pow(a.x-b.x, 2)+Math.pow(a.y-b.y, 2))
 }
 
-function clamp(a, n, x) {
-    return max(min(a, x), n);
-}
+
