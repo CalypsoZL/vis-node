@@ -8,7 +8,7 @@ const EDGE_LEN_REDUCTION = 18;
 let nodes = [];
 let data = { nodes: [], links: [] };
 let threshold = 3;
-let decayRate = 0.9;
+let decayRate = 0.7;
 // nodes.push(new VisNode(threshold, decayRate));
 // s.graph.addNode({
 //     // Main attributes:
@@ -102,8 +102,11 @@ s.refresh();
 // nodes[0].input(50);
 // nodes[0].input(50);
 // nodes[1].input(50);
-const slowness = 10
-let x = -slowness*2;
+
+let x = 0;
+const decayInterval = Math.round(Math.sqrt(nodes.length));
+console.log(decayInterval, "decayInterval");
+
 setInterval(() => {
     const graphNodes = s.graph.nodes()
     const graphEdges = s.graph.edges()
@@ -116,7 +119,7 @@ setInterval(() => {
         }
     }
 
-    if (x % 2) nodes.forEach(node => node.decay());
+    if (x++ % decayInterval == 0) nodes.forEach(node => node.decay());
     nodes.forEach(node => node.distributeCharge());
     s.refresh();
     // const sin = (Math.sin(x/slowness)+1)*2;
