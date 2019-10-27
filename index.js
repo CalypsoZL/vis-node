@@ -71,7 +71,7 @@ for (let i = 0; i < nodes.length; i++) {
 const minNodeSize = 1;
 const maxNodeSize = 5;
 const minEdgeSize = 0.1;
-const maxEdgeSize = 5;
+const maxEdgeSize = 3;
 s.settings({
     minNodeSize: minNodeSize,
     maxNodeSize: maxNodeSize,
