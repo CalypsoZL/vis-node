@@ -22,6 +22,8 @@ var VisNode = /** @class */ (function () {
         if (this.charge < this.threshold) {
             return this.decayEdges();
         }
+        const witholding = Math.sqrt(this.charge);
+        this.charge -= witholding;
 
         var remainingEdges = [];
         for (var i = 0; i < this.edges.length; i++) {
@@ -61,6 +63,7 @@ var VisNode = /** @class */ (function () {
             target.charge += chargePortion;
             this.charge -= chargePortion;
         }
+        this.charge += witholding
         return this.growEdges();
     };
     VisNode.prototype.decayEdges = function () {

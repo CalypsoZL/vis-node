@@ -7,8 +7,11 @@ const WIDTH = 400;
 const EDGE_LEN_REDUCTION = 22;
 let nodes = [];
 let data = { nodes: [], links: [] };
-let threshold = 3;
-let decayRate = 0.3;
+let threshold = 2;
+let decayRate = 0.9;
+const colorspread = 1;
+const colorstart = 0;
+const edgeDecayRate = 200;
 // nodes.push(new VisNode(threshold, decayRate));
 // s.graph.addNode({
 //     // Main attributes:
@@ -35,7 +38,7 @@ let decayRate = 0.3;
 
 for (let i = 0; i < NODENUM; i++) {
     // let threshold = Math.random() * 20+1;
-    nodes.push(new VisNode(threshold, Math.random() * decayRate, 1, 40));
+    nodes.push(new VisNode(threshold, Math.random() * decayRate, 1, edgeDecayRate));
     s.graph.addNode({
         // Main attributes:
         id: i,
@@ -44,15 +47,15 @@ for (let i = 0; i < NODENUM; i++) {
         x: Math.random() * 2 * WIDTH - WIDTH,
         y: Math.random() * 2 * HEIGHT - HEIGHT,
         size: 1,
-        color: '#454eb5'
+        color: toColor(i*colorspread+ colorstart)
     });
 }
 s.refresh()
 const graphNodes = s.graph.nodes();
 const graphEdges = s.graph.edges();
 const r = diff({x:WIDTH,y:WIDTH}, {x:-HEIGHT, y:-HEIGHT});
-console.log(r);
-console.log(graphNodes);
+// console.log(r);
+// console.log(graphNodes);
 for (let i = 0; i < nodes.length; i++) {
     for (let j = 0; j < nodes.length; j++) {
         const distModifier = diff(graphNodes[i], graphNodes[j])*EDGE_LEN_REDUCTION/r;
@@ -64,15 +67,15 @@ for (let i = 0; i < nodes.length; i++) {
                 source: i,
                 target: j,
                 size: 1,
-                color: '#45b5ac'
+                color: nodes[i].color
             });
         }
     }
 }
-const minNodeSize = 1;
+const minNodeSize = 0.5;
 const maxNodeSize = 5;
-const minEdgeSize = 0.1;
-const maxEdgeSize = 2;
+const minEdgeSize = 0.2;
+const maxEdgeSize = 1.5;
 s.settings({
     minNodeSize: minNodeSize,
     maxNodeSize: maxNodeSize,
@@ -109,29 +112,43 @@ console.log(decayInterval, "decayInterval");
 s.bind('clickNode',(e) => {
     nodes[e.data.node.id].input(10);
 });
-setInterval(() => {
+const nodeMult = ((minNodeSize + maxNodeSize)/4);
+const edgeMult = ((minEdgeSize + maxEdgeSize)/40);
+s.myUpdate = () => {
     const graphNodes = s.graph.nodes()
     const graphEdges = s.graph.edges()
     let j = 0;
     for (let i = 0; i < graphNodes.length; i++) {
-        graphNodes[i].size = clamp((nodes[i].charge + 1) * 0.5, minNodeSize, maxNodeSize);
+        graphNodes[i].size = clamp((nodes[i].charge + 1)*nodeMult, minNodeSize, maxNodeSize);
         for (let k = 0; k < nodes[i].edges.length; k++) {
-            graphEdges[j].size = clamp(nodes[i].edges[k] * 0.05, minEdgeSize, maxEdgeSize);
+            graphEdges[j].size = clamp(nodes[i].edges[k] *edgeMult, minEdgeSize, maxEdgeSize);
             j++;
         }
     }
+}
+// setInterval(() => {
+//     const graphNodes = s.graph.nodes()
+//     const graphEdges = s.graph.edges()
+//     let j = 0;
+//     for (let i = 0; i < graphNodes.length; i++) {
+//         graphNodes[i].size = clamp((nodes[i].charge + 1) * 0.5, minNodeSize, maxNodeSize);
+//         for (let k = 0; k < nodes[i].edges.length; k++) {
+//             graphEdges[j].size = clamp(nodes[i].edges[k] * 0.05, minEdgeSize, maxEdgeSize);
+//             j++;
+//         }
+//     }
 
-    if (x++ % decayInterval == 0) nodes.forEach(node => node.decay());
-    nodes.forEach(node => node.distributeCharge());
-    s.refresh();
-    // const sin = (Math.sin(x/slowness)+1)*2;
-    // const cos = (Math.cos(x++/slowness)+1)*2;
-    // // console.log(sin);
-    // // console.log(cos);
-    // nodes[0].input(sin);
-    // nodes[1].input(cos);
-    // nodes.forEach(node => node.decay());
-}, 100);
+//     if (x++ % decayInterval == 0) nodes.forEach(node => node.decay());
+//     nodes.forEach(node => node.distributeCharge());
+//     s.refresh();
+//     // const sin = (Math.sin(x/slowness)+1)*2;
+//     // const cos = (Math.cos(x++/slowness)+1)*2;
+//     // // console.log(sin);
+//     // // console.log(cos);
+//     // nodes[0].input(sin);
+//     // nodes[1].input(cos);
+//     // nodes.forEach(node => node.decay());
+// }, 100);
 
 // setInterval(() => {
 //     nodes.forEach(node => node.distributeCharge())
@@ -149,3 +166,46 @@ function diff(a, b) {
 }
 
 
+function toColor(num) {
+    const val = 200 * num / NODENUM;
+    console.log(val)
+    const h= Math.floor((200 - val) * 240 / 200);
+    const s = Math.abs(val - 100)/100;
+    const v = 5;
+    return hsv2rgb(h, s, v);
+}
+
+function hsv2rgb(h, s, v) {
+    // adapted from http://schinckel.net/2012/01/10/hsv-to-rgb-in-javascript/
+    var rgb, i, data = [];
+    if (s === 0) {
+      rgb = [v,v,v];
+    } else {
+      h = h / 60;
+      i = Math.floor(h);
+      data = [v*(1-s), v*(1-s*(h-i)), v*(1-s*(1-(h-i)))];
+      switch(i) {
+        case 0:
+          rgb = [v, data[2], data[0]];
+          break;
+        case 1:
+          rgb = [data[1], v, data[0]];
+          break;
+        case 2:
+          rgb = [data[0], v, data[2]];
+          break;
+        case 3:
+          rgb = [data[0], data[1], v];
+          break;
+        case 4:
+          rgb = [data[2], data[0], v];
+          break;
+        default:
+          rgb = [v, data[0], data[1]];
+          break;
+      }
+    }
+    return '#' + rgb.map(function(x){
+      return ("0" + Math.round(x*255).toString(16)).slice(-2);
+    }).join('');
+  };

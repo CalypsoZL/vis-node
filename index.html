@@ -32,6 +32,7 @@
     <script src="./visnode.js"></script>
     <script src="./index.js"></script>
     <script>
+        var interval = -1;
         var loading = -1;
         function handleFileSelect(evt) {
             const files = evt.target.files; // FileList object
@@ -39,6 +40,7 @@
             loading = setInterval(() => {
                 nodes[i++ % nodes.length].input(5);
             }, 300);
+            clearInterval(interval)
             // files is a FileList of File objects. List some properties.
             const output = [];
             for (let i = 0, f; f = files[i]; i++) {
@@ -47,18 +49,24 @@
                 }
                 const aud = document.getElementById("audio-element");
                 aud.src = window.URL.createObjectURL(f);
-                var audio = new Audio(f);
+                var audio = new Aud(f);
+                const audioSourceNode = audio.context.createMediaElementSource(aud)
                 audio._loadTrack(f).then((buffer) => {
-                    new Waveform("#wav", buffer);
+                    const analyser = audio.context.createAnalyser();
+                    audioSourceNode.connect(analyser);
+                    analyser.connect(audio.context.destination);
+                    analyser.fftSize = Math.pow(2, 13);
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Float32Array(bufferLength);
+                    new Waveform("#wav", analyser, dataArray);
                     console.log(buffer.numberOfChannels)
-                    console.log(buffer.getChannelData(0))
                 })
             }
         }
 
         document.getElementById('files').addEventListener('change', handleFileSelect, false);
 
-        class Audio {
+        class Aud {
             constructor(f) {
                 console.log(f)
                 this.context = this._createAudioContext();
@@ -87,33 +95,58 @@
         }
         const PEAK_COUNT = 6000;
         class Waveform {
-            constructor(svgPathId, buffer) {
+            constructor(svgPathId, analyser, dataArray) {
                 this.svgPathId = svgPathId;
-                this.buffer = buffer;
+                this.analyser = analyser;
+                this.dataArray = dataArray;
                 // console.log(this._getPeaks(PEAK_COUNT))
                 // this.draw();
-                this.setNodes(nodes);
+                this.setNodes();
             }
-            setNodes(nodes) {
+            setNodes() {
                 let i = 0;
-                const peaks = this._getPeaks(PEAK_COUNT);
-                const totalPeaks = peaks.length;
-                const size = Math.round(this.buffer.length / this.buffer.sampleRate) % Math.round(Math.sqrt(nodes.length));
-                console.log(this.buffer, size)
-                const aud = document.getElementById("audio-element");
-                const speed = (aud.duration*1000)/totalPeaks;
-                let interval = -1;
+                // const peaks = this._getPeaks(PEAK_COUNT);
+                // const totalPeaks = peaks.length;
+                // const size = Math.round(this.buffer.length / this.buffer.sampleRate) % Math.round(Math.sqrt(nodes.length));
+                // console.log(this.buffer, size)
+                const bins = this.analyser.frequencyBinCount;
+                const speed = 100;
+                let increment = Math.floor(bins / nodes.length);
                 const run = () => {
-                    const a = (~~(i/2)+1)
-                    const b = (peaks.shift()+1)
-                    const j = i % size;
-                    const k = ++i % size;
-                    nodes[j].input(a/Math.pow(nodes[j].charge, nodes[j].charge));
-                    nodes[k].input(b/Math.pow(nodes[k].charge, nodes[k].charge));
-                    if (i % 2) nodes.forEach(node => node.decay());
-                    // console.log(nodes[0].charge, nodes[1].charge);
-                    if (i >= totalPeaks) clearInterval(interval);
+                    s.myUpdate();
+                    nodes.forEach(node => node.decay());
+                    nodes.forEach(node => node.distributeCharge());
+                    this.analyser.getFloatFrequencyData(this.dataArray);
+                    for (let i = 0; i < min(bins, nodes.length); i++) {
+                        const val = clamp(Math.pow(this.dataArray[i*increment]+140,3)/(190000*max(nodes[i].charge, 1)), 0,  10);
+                        if (val < 1.625) continue;
+                        nodes[i].input(clamp(val, 0,  50));
+                    }
+                    if (increment > 1 && this.dataArray[(i-1)*increment] < 140) {
+                        increment--;
+                    }
+                    if (increment < Math.floor(bins / nodes.length) && this.dataArray[(i)*increment] > 140) {
+                        increment++;
+                    }
+                    s.refresh();
                 };
+                interval = setInterval(run, speed);
+
+                const aud = document.getElementById("audio-element");
+
+
+
+                // const run = () => {
+                //     const a = (~~(i/2)+1)
+                //     const b = (peaks.shift()+1)
+                //     const j = i % size;
+                //     const k = ++i % size;
+                //     nodes[j].input(a/Math.pow(nodes[j].charge, nodes[j].charge));
+                //     nodes[k].input(b/Math.pow(nodes[k].charge, nodes[k].charge));
+                //     if (i % 2) nodes.forEach(node => node.decay());
+                //     // console.log(nodes[0].charge, nodes[1].charge);
+                //     if (i >= totalPeaks) clearInterval(interval);
+                // };
                 clearInterval(loading);
                 aud.onpause = () => {
                     clearInterval(interval);
@@ -124,56 +157,55 @@
                 aud.play();
             }
 
-            _getPeaks(length) {
-                const sampleSize = this.buffer.length / length;
-                const sampleStep = ~~(sampleSize / 10) || 1;
-                const numberOfChannels = this.buffer.numberOfChannels;
-                const mergedPeaks = [];
+            // _getPeaks(length) {
+            //     const sampleSize = this.buffer.length / length;
+            //     const sampleStep = ~~(sampleSize / 10) || 1;
+            //     const numberOfChannels = this.buffer.numberOfChannels;
+            //     const mergedPeaks = [];
 
-                for (let channelNumber = 0; channelNumber < numberOfChannels; channelNumber++) {
-                    const peaks = [];
-                    const channelData = this.buffer.getChannelData(channelNumber);
+            //     for (let channelNumber = 0; channelNumber < numberOfChannels; channelNumber++) {
+            //         const peaks = [];
+            //         const channelData = this.buffer.getChannelData(channelNumber);
 
-                    for (let peakNumber = 0; peakNumber < length; peakNumber++) {
-                        const start = ~~(peakNumber * sampleSize);
-                        const end = ~~(start + sampleSize);
-                        let min = channelData[0];
-                        let max = channelData[0];
+            //         for (let peakNumber = 0; peakNumber < length; peakNumber++) {
+            //             const start = ~~(peakNumber * sampleSize);
+            //             const end = ~~(start + sampleSize);
+            //             let min = channelData[0];
+            //             let max = channelData[0];
 
-                        for (let sampleIndex = start; sampleIndex < end; sampleIndex += sampleStep) {
-                            const value = channelData[sampleIndex];
+            //             for (let sampleIndex = start; sampleIndex < end; sampleIndex += sampleStep) {
+            //                 const value = channelData[sampleIndex];
 
-                            if (value > max) { max = value; }
-                            if (value < min) { min = value; }
-                        }
+            //                 if (value > max) { max = value; }
+            //                 if (value < min) { min = value; }
+            //             }
 
-                        peaks[2 * peakNumber] = max;
-                        peaks[2 * peakNumber + 1] = min;
+            //             peaks[2 * peakNumber] = max;
+            //             peaks[2 * peakNumber + 1] = min;
 
-                        if (channelNumber === 0 || max > mergedPeaks[2 * peakNumber]) {
-                            mergedPeaks[2 * peakNumber] = max;
-                        }
+            //             if (channelNumber === 0 || max > mergedPeaks[2 * peakNumber]) {
+            //                 mergedPeaks[2 * peakNumber] = max;
+            //             }
 
-                        if (channelNumber === 0 || min < mergedPeaks[2 * peakNumber + 1]) {
-                            mergedPeaks[2 * peakNumber + 1] = min;
-                        }
-                    }
-                }
-                return mergedPeaks;
-            }
-
-            draw() {
-                console.log(this.svgPath())
-                document.getElementById("wav").setAttribute('d', this.svgPath());
-            }
+            //             if (channelNumber === 0 || min < mergedPeaks[2 * peakNumber + 1]) {
+            //                 mergedPeaks[2 * peakNumber + 1] = min;
+            //             }
+            //         }
+            //     }
+            //     return mergedPeaks;
+            // }
+            // draw() {
+            //     console.log(this.svgPath())
+            //     document.getElementById("wav").setAttribute('d', this.svgPath());
+            // }
 
             // svgPath() {
-            //     const peaks = this._getPeaks(PEAK_COUNT);
+                //     const peaks = this._getPeaks(PEAK_COUNT);
             //     const totalPeaks = peaks.length;
 
             //     let d = '';
             //     for(let peakNumber = 0; peakNumber < totalPeaks; peakNumber++) {
-            //         if (peakNumber%2 === 0) {
+                //         if (peakNumber%2 === 0) {
             //             d += ` M${~~(peakNumber/2)}, ${peaks.shift()}`;
             //         } else {
             //             d += ` L${~~(peakNumber/2)}, ${peaks.shift()}`;
