@@ -35,3 +35,20 @@ for (let i = 0; i < nodes.length; i++) {
     }
 }
 
+function trim1 (str) {
+    return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+}
+
+function decimalToHex(d) {
+    d = Math.round(d);
+    var hex = d.toString(16);
+    while (hex.length < 2) {
+        hex = "0" + hex;
+    }
+
+    return hex;
+}
+
+
+
+// -->

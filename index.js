@@ -4,14 +4,19 @@ let s = new sigma('container');
 const NODENUM = 1500;
 const HEIGHT = 250;
 const WIDTH = 400;
-const EDGE_LEN_REDUCTION = 22;
+const EDGE_LEN_REDUCTION = 21;
 let nodes = [];
 let data = { nodes: [], links: [] };
-let threshold = 2;
-let decayRate = 0.9;
+let threshold = 1;
+let decayRate = 0.999;
 const colorspread = 1;
 const colorstart = 0;
 const edgeDecayRate = 200;
+
+const minNodeSize = 0.5;
+const maxNodeSize = 5;
+const minEdgeSize = 0.2;
+const maxEdgeSize = 1.5;
 // nodes.push(new VisNode(threshold, decayRate));
 // s.graph.addNode({
 //     // Main attributes:
@@ -47,7 +52,7 @@ for (let i = 0; i < NODENUM; i++) {
         x: Math.random() * 2 * WIDTH - WIDTH,
         y: Math.random() * 2 * HEIGHT - HEIGHT,
         size: 1,
-        color: toColor(i*colorspread+ colorstart)
+        color: convert(spread(regularize(i, 0, NODENUM), 380, 781))
     });
 }
 s.refresh()
@@ -60,22 +65,19 @@ for (let i = 0; i < nodes.length; i++) {
     for (let j = 0; j < nodes.length; j++) {
         const distModifier = diff(graphNodes[i], graphNodes[j])*EDGE_LEN_REDUCTION/r;
         if (i !== j && Math.random() > distModifier) {
-            let edgeWeight = Math.random() * 50 * distModifier;
+            let edgeWeight = Math.random() * 20 * distModifier;
             nodes[i].addConnection(nodes[j], edgeWeight);
             s.graph.addEdge({
                 id: i + '-' + j,
                 source: i,
                 target: j,
-                size: 1,
+                size: minEdgeSize,
                 color: nodes[i].color
             });
         }
     }
 }
-const minNodeSize = 0.5;
-const maxNodeSize = 5;
-const minEdgeSize = 0.2;
-const maxEdgeSize = 1.5;
+
 s.settings({
     minNodeSize: minNodeSize,
     maxNodeSize: maxNodeSize,
@@ -209,3 +211,75 @@ function hsv2rgb(h, s, v) {
       return ("0" + Math.round(x*255).toString(16)).slice(-2);
     }).join('');
   };
+
+function decimalToHex(d) {
+  d = Math.round(d);
+  var hex = d.toString(16);
+  while (hex.length < 2) {
+      hex = "0" + hex;
+  }
+
+  return hex;
+}
+
+function regularize(n, min, max) {
+  return (clamp(n, min, max) - min) / (max-min);
+}
+
+function spread(n, min, max) {
+  return n * (max - min)+min;
+}
+
+function convert(w) {
+  let red, green, blue, factor;
+
+  if (w >= 380 && w < 440) {
+    red = -(w - 440) / (440 - 380);
+    green = 0.0;
+    blue = 1.0;
+  } else if (w >= 440 && w < 490) {
+    red = 0.0;
+    green = (w - 440) / (490 - 440);
+    blue = 1.0;
+  } else if (w >= 490 && w < 510) {
+    red = 0.0;
+    green = 1.0;
+    blue = -(w - 510) / (510 - 490);
+  } else if (w >= 510 && w < 580) {
+    red = (w - 510) / (580 - 510);
+    green = 1.0;
+    blue = 0.0;
+  } else if (w >= 580 && w < 645) {
+    red = 1.0;
+    green = -(w - 645) / (645 - 580);
+    blue = 0.0;
+  } else if (w >= 645 && w < 781) {
+    red = 1.0;
+    green = 0.0;
+    blue = 0.0;
+  } else {
+    red = 0.0;
+    green = 0.0;
+    blue = 0.0;
+  }
+
+
+  // Let the intensity fall off near the vision limits
+
+  if (w >= 380 && w < 420)
+    factor = 0.4 + 0.6 * (w - 380) / (420 - 380);
+  else if (w >= 420 && w < 701)
+    factor = 1.0;
+  else if (w >= 701 && w < 781)
+    factor = 0.4 + 0.6 * (780 - w) / (780 - 700);
+  else
+    factor = 0.0;
+
+  const gamma = 0.80;
+  const R = (red > 0 ? 255 * Math.pow(red * factor, gamma) : 0);
+  const G = (green > 0 ? 255 * Math.pow(green * factor, gamma) : 0);
+  const B = (blue > 0 ? 255 * Math.pow(blue * factor, gamma) : 0);
+
+  const hex = "#" + decimalToHex(R) + decimalToHex(G) + decimalToHex(B);
+  return hex;
+}

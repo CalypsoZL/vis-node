@@ -22,7 +22,7 @@ var VisNode = /** @class */ (function () {
         if (this.charge < this.threshold) {
             return this.decayEdges();
         }
-        const witholding = Math.sqrt(this.charge);
+        const witholding = this.threshold/MAXCHARGE;
         this.charge -= witholding;
 
         var remainingEdges = [];
@@ -83,6 +83,9 @@ var VisNode = /** @class */ (function () {
     };
     VisNode.prototype.input = function (charge) {
         this.charge = min(this.charge + charge, MAXCHARGE);
+        if (this.charge == MAXCHARGE) {
+            this.decayRate *= 2;
+        }
     };
     VisNode.prototype.addConnection = function (target, edgeThrougput) {
         this.children.push(target);
