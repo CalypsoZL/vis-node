@@ -11,7 +11,7 @@ let threshold = 1;
 let decayRate = 0.999;
 const colorspread = 1;
 const colorstart = 0;
-const edgeDecayRate = 200;
+const edgeDecayRate = 20;
 
 const minNodeSize = 0.5;
 const maxNodeSize = 5;
@@ -72,7 +72,7 @@ for (let i = 0; i < nodes.length; i++) {
                 source: i,
                 target: j,
                 size: minEdgeSize,
-                color: nodes[i].color
+                color: "#45b5ac"
             });
         }
     }

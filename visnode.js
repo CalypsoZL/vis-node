@@ -68,7 +68,7 @@ var VisNode = /** @class */ (function () {
     };
     VisNode.prototype.decayEdges = function () {
         for (var i = 0; i < this.edges.length; i++) {
-            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) / (this.edgeDecayReduction/5), 0);
+            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) / (this.edgeDecayReduction), 0);
         }
     };
     VisNode.prototype.growEdges = function () {
@@ -82,10 +82,10 @@ var VisNode = /** @class */ (function () {
         }
     };
     VisNode.prototype.input = function (charge) {
-        this.charge = min(this.charge + charge, MAXCHARGE);
         if (this.charge == MAXCHARGE) {
-            this.decayRate *= 2;
+            this.decayRate = Math.sqrt(this.decayRate);
         }
+        this.charge = min(this.charge + charge, MAXCHARGE);
     };
     VisNode.prototype.addConnection = function (target, edgeThrougput) {
         this.children.push(target);
