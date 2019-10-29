@@ -59,7 +59,7 @@ for (let i = 0; i < NODENUM; i++) {
         label: i,
         // Display attributes:
         x: Math.cos(angle) * clamp(ifire * WIDTH,Math.pow(WIDTH, 0.5),WIDTH),
-        y: Math.sin(angle) * clamp(ifire * HEIGHT,Math.pow(HEIGHT, 0.5),HEIGHT),
+        y: Math.sin(angle) * clamp(ifire * HEIGHT,Math.pow(HEIGHT, 0.5),HEIGHT)-50,
         size: minNodeSize,
         color: convert(spread(regularize(i, 0, NODENUM), 380-colorspread, 781+colorspread))
     });
@@ -131,8 +131,8 @@ s.refresh();
 // nodes[1].input(50);
 
 let x = 0;
-const decayInterval = Math.round(Math.pow(nodes.length, 1/4));
-console.log(decayInterval, "decayInterval");
+// const decayInterval = Math.round(Math.pow(nodes.length, 1/4));
+// console.log(decayInterval, "decayInterval");
 // s.bind('clickNode',(e) => {
 //     nodes[e.data.node.id].input(10);
 // });
