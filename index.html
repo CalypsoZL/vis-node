@@ -123,10 +123,10 @@
                         if (decibels > spread(0.9, this.analyser.minDecibels, this.analyser.maxDecibels)) {
                             console.log();
                         }
-                        const val = Math.pow(regularize(decibels, this.analyser.minDecibels, this.analyser.maxDecibels)/(i % 15+1)*3.5, 2)
+                        const val = Math.pow(4, 2*(regularize(decibels, this.analyser.minDecibels, this.analyser.maxDecibels)/(i % 16 + 1)) )-1;
                         // const val = clamp(Math.pow(this.dataArray[i*increment]+140,3)/(500000*max(nodes[i].charge, 1)), 0,  10);
                         // if (val < 1.625) continue;
-                        nodes[i].input(val/Math.pow(nodes[i].charge+1, 1.2));
+                        nodes[i].input(val);
                     }
                     if (increment > 1 && this.dataArray[(i-1)*increment] < 140) {
                         increment--;

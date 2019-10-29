@@ -16,7 +16,8 @@ var VisNode = /** @class */ (function () {
         this.distributeCharge();
     };
     VisNode.prototype.decay = function () {
-        this.charge = clamp(this.charge - this.charge * this.decayRate, 0.1,  this.charge);
+        const useDecay = this.charge < MAXCHARGE ? this.decayRate : Math.sqrt(this.decayRate);
+        this.charge = Math.sqrt(clamp(this.charge - this.charge * useDecay, 0.1,  this.charge));
     }
     VisNode.prototype.distributeCharge = function () {
         if (this.charge < this.threshold) {
@@ -68,7 +69,7 @@ var VisNode = /** @class */ (function () {
     };
     VisNode.prototype.decayEdges = function () {
         for (var i = 0; i < this.edges.length; i++) {
-            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) / (this.edgeDecayReduction), 0);
+            this.edges[i] = max(this.edges[i] - Math.sqrt(this.edges[i]) , 0);
         }
     };
     VisNode.prototype.growEdges = function () {
@@ -82,10 +83,12 @@ var VisNode = /** @class */ (function () {
         }
     };
     VisNode.prototype.input = function (charge) {
-        if (this.charge == MAXCHARGE) {
-            this.decayRate = Math.sqrt(this.decayRate);
-        }
-        this.charge = min(this.charge + charge, MAXCHARGE);
+        // if (this.charge == MAXCHARGE) {
+        //     this.decayRate = Math.sqrt(this.decayRate);
+        // } else if (this.charge == 0) {
+        //     this.decayRate *= this.decayRate
+        // }
+        this.charge = min(this.charge + charge/(this.charge+1), MAXCHARGE);
     };
     VisNode.prototype.addConnection = function (target, edgeThrougput) {
         this.children.push(target);

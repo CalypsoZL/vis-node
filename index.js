@@ -2,16 +2,16 @@
 
 let s = new sigma('container');
 const NODENUM = 1500;
-const HEIGHT = 250;
-const WIDTH = 400;
+const HEIGHT = 200;
+const WIDTH = 350;
 const EDGE_LEN_REDUCTION = 21;
 let nodes = [];
 let data = { nodes: [], links: [] };
 let threshold = 1;
-let decayRate = 0.999;
-const colorspread = 1;
+let decayRate = 0.9999;
+const colorspread = -20;
 const colorstart = 0;
-const edgeDecayRate = 20;
+const edgeDecayRate = Math.sqrt(NODENUM/EDGE_LEN_REDUCTION);
 
 const minNodeSize = 0.5;
 const maxNodeSize = 5;
@@ -42,6 +42,7 @@ const maxEdgeSize = 1.5;
 // });
 
 for (let i = 0; i < NODENUM; i++) {
+    let ifire = Math.pow(regularize(i, 0, NODENUM), 0.1);
     // let threshold = Math.random() * 20+1;
     nodes.push(new VisNode(threshold, Math.random() * decayRate, 1, edgeDecayRate));
     s.graph.addNode({
@@ -49,10 +50,10 @@ for (let i = 0; i < NODENUM; i++) {
         id: i,
         label: i,
         // Display attributes:
-        x: Math.random() * 2 * WIDTH - WIDTH,
-        y: Math.random() * 2 * HEIGHT - HEIGHT,
+        x: Math.random() * 2 * WIDTH*ifire - WIDTH*ifire,
+        y: Math.random() * 2 * HEIGHT*ifire - HEIGHT*ifire,
         size: 1,
-        color: convert(spread(regularize(i, 0, NODENUM), 380, 781))
+        color: convert(spread(regularize(i, 0, NODENUM), 380-colorspread, 781+colorspread))
     });
 }
 s.refresh()
