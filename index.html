@@ -17,10 +17,14 @@
     <audio id="audio-element"
            src=""
            controls="true"
-           style="width: 512px;">
+           style="width: 100%;">
     </audio>
-    <p style="display: inline-block;">Pick audio file:</p>
-    <input type="file" id="files" name="files[]" multiple />
+    <div align="center">
+        <p style="display: inline-block;">Pick audio file:</p>
+        <input type="file" id="files" name="files[]" multiple />
+        <p style="display: inline-block;">Audible Feedback (only allowed when paused):</p>
+        <input id="play-feedback" type="checkbox" onchange="feedback(this)"/>
+    </div>
     <!-- <div><canvas id="fft" width="512" height="200"></canvas></div> -->
     <!-- <svg id="wav" viewBox="0 -1 6000 2" preserveAspectRatio="none">
         <g>
@@ -34,6 +38,10 @@
     <script>
         var interval = -1;
         var loading = -1;
+        let playback = -1;
+        let feedback = (checkbox) => {
+            checkbox.checked = false;
+        };
         function handleFileSelect(evt) {
             const files = evt.target.files; // FileList object
             let i = 0;
@@ -61,6 +69,176 @@
                     new Waveform("#wav", analyser, dataArray);
                     console.log(buffer.numberOfChannels)
                 })
+                function makeDistortionCurve(amount) {
+                    var k = typeof amount === 'number' ? amount : 50,
+                        n_samples = 44100,
+                        curve = new Float32Array(n_samples),
+                        deg = Math.PI / 180,
+                        i = 0,
+                        x;
+                    for ( ; i < n_samples; ++i ) {
+                        x = i * 2 / n_samples - 1;
+                        curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
+                        return curve;
+                    };
+                }
+                function playNote(frequency, duration, type="sine", gain=1) {
+                    var distortion = audio.context.createWaveShaper();
+
+                    // distortion.curve = makeDistortionCurve(frequency);
+                    // distortion.oversample = '2x';
+
+                    // create Oscillator node
+                    var gainNode = audio.context.createGain();
+                    var oscillator = audio.context.createOscillator();
+                    oscillator.type = type;
+                    oscillator.frequency.value = frequency; // value in hertz
+                    oscillator.connect(gainNode);
+                    // oscillator.connect(audio.context.destination);
+                    gainNode.connect(audio.context.destination);
+                    oscillator.start();
+                    gainNode.gain.setValueAtTime(gain, audio.context.currentTime);
+
+                    setTimeout(() => {
+                        oscillator.stop();
+                    }, duration);
+                }
+
+                function scale(n) {
+                    return 65 * Math.pow(Math.pow(2, 1/12), n);
+                }
+                feedback = (checkbox) => {
+                    if (!checkbox.checked || !aud.paused) {
+                        clearInterval(playback);
+                        checkbox.checked = false;
+                        return;
+                    }
+                    const duration = 250;
+                    const freq = 440;
+                    let sum = 0;
+                    playback = setInterval(() => {
+                        const bins = 40;
+                        const tones = [];
+                        for (let i = 0; i < bins; i++) {
+                            tones.push(0);
+                        }
+                        const step = Math.ceil(nodes.length / bins);
+                        const topFour = [];
+                        for (let i = 0, j = 0; i < nodes.length; i++) {
+                            tones[j] += nodes[i].charge > nodes[i].threshold;
+                            if ((j+1)*step < i) {
+                                sum += tones[j];
+                                // topFour.sort();
+                                // if (topFour.length < 4) {
+                                //     topFour.push(tones[j]);
+                                // } else {
+                                //     if (tones[j] > topFour[topFour.length - 1])
+                                //     topFour[topFour.length - 1] = tones[j];
+                                // }
+                                j++;
+                            }
+                        }
+                        const sortedNonZeroTones = [];
+                        for(let i=0; i<tones.length;i++ )
+                        {
+                            if(tones[i]>0)
+                                sortedNonZeroTones.push(tones[i]);
+                        }
+                        if (sortedNonZeroTones.length >= 5) {
+                        sortedNonZeroTones.sort();
+                            // console.log(sortedNonZeroTones)
+                            tones.forEach((n, i) => {
+                                if (n < sortedNonZeroTones[0]) return;
+                                const division = sortedNonZeroTones.length/5
+                                // if (n < sortedNonZeroTones[Math.floor(division)]) {
+                                //     const highTone = Math.round(spread(regularize(i, 0, sortedNonZeroTones.length), 32, 40));
+                                //     playNote(highTone * 325, duration);
+                                // } else if (n < sortedNonZeroTones[Math.floor(2*division)]) {
+                                //     const midHighTone = Math.round(spread(regularize(i, 0, sortedNonZeroTones.length), 24, 32));
+                                //     playNote(midHighTone * 260, duration);
+                                // } else if (n < sortedNonZeroTones[Math.floor(3*division)]) {
+                                //     const midTone = Math.round(spread(regularize(i, 0, sortedNonZeroTones.length), 16, 24));
+                                //     playNote(midTone * 195, duration);
+                                const gain = n/sortedNonZeroTones[sortedNonZeroTones.length - 1];
+                                if (n > sortedNonZeroTones[Math.floor(3*division)]) {
+                                    const lowTone = Math.round(spread(regularize(i, 0, sortedNonZeroTones.length), 1, 8));
+                                    playNote((lowTone + lowTone%2+1) * 45, duration, "sine", gain);
+                                } else {
+                                    const midLowTone = Math.round(spread(regularize(i, 0, sortedNonZeroTones.length), 1, 8));
+                                    playNote((midLowTone + midLowTone%2+1) * 90, duration, "triangle", gain);
+                                }
+                            });
+                        }
+                    }, duration);
+
+
+
+
+                    // var osc = audio.context.createOscillator();
+
+                    // var real = new Float32Array(nodes.map(n => regularize(n.charge, 0, 3)));
+
+                    // var imag = new Float32Array(real.length);
+                    // var hornTable = audio.context.createPeriodicWave(real, imag);
+
+                    // osc = audio.context.createOscillator();
+                    // osc.setPeriodicWave(hornTable);
+                    // osc.frequency.value = 160;
+                    // osc.connect(audio.context.destination);
+                    // osc.start(0);
+                    // var lfoTable = audio.context.createPeriodicWave(real, imag);
+                    // osc = audio.context.createOscillator();
+                    // osc.frequency.value = 800;
+
+                    // lfo = audio.context.createOscillator();
+                    // lfo.setPeriodicWave(lfoTable);
+                    // lfo.frequency.value = 1/0.380;
+
+                    // lfoGain = audio.context.createGain();
+                    // lfoGain.gain.value = 800;
+
+                    // lfo.connect(lfoGain);
+                    // lfoGain.connect(osc.frequency);
+                    // osc.connect(audio.context.destination);
+
+                    // osc.start(0);
+                    // lfo.start(0);
+
+
+                    // const myArrayBuffer = audio.context.createBuffer(2, audio.context.sampleRate * 3, audio.context.sampleRate);
+                    // console.log(myArrayBuffer.length);
+                    // let i = 0;
+                    // setInterval(() => {
+                    //     console.log(nodes.map(n => regularize(n.charge, 0, 5)));
+                    //     for (var channel = 0; channel < myArrayBuffer.numberOfChannels; channel++) {
+                    //         // This gives us the actual ArrayBuffer that contains the data
+                    //         var nowBuffering = myArrayBuffer.getChannelData(channel);
+                    //         for (var j = 0; j < nodes.length; j++, i++) {
+                    //             // Math.random() is in [0; 1.0]
+                    //             // audio needs to be in [-1.0; 1.0]
+                    //             const nodeData = regularize(nodes[j], 0, 1) * 2 -1;
+                    //             nowBuffering[i] = nodeData;
+                    //         }
+                    //     }
+                    // }, 1000);
+                    // // Get an AudioBufferSourceNode.
+                    // // This is the AudioNode to use when we want to play an AudioBuffer
+                    // const source = audio.context.createBufferSource();
+                    // // set the buffer in the AudioBufferSourceNode
+                    // source.buffer = myArrayBuffer;
+                    // // connect the AudioBufferSourceNode to the
+                    // // destination so we can hear the sound
+                    // source.connect(audio.context.destination);
+                    // // start the source playing
+                    // source.start();
+                };
+                aud.onplay = () => {
+                    if (playback !== -1) {
+                        clearInterval(playback);
+                        document.getElementById("play-feedback").checked = false;
+                        playback = -1;
+                    }
+                }
             }
         }
 

@@ -21,6 +21,8 @@ const minNodeSize = 0.45;
 const maxNodeSize = 6;
 const minEdgeSize = 0.2;
 const maxEdgeSize = 1.5;
+const nodeMult = ((minNodeSize + maxNodeSize)/6);
+const edgeMult = ((minEdgeSize + maxEdgeSize)/40);
 // nodes.push(new VisNode(threshold, decayRate));
 // s.graph.addNode({
 //     // Main attributes:
@@ -134,8 +136,7 @@ console.log(decayInterval, "decayInterval");
 // s.bind('clickNode',(e) => {
 //     nodes[e.data.node.id].input(10);
 // });
-const nodeMult = ((minNodeSize + maxNodeSize)/6);
-const edgeMult = ((minEdgeSize + maxEdgeSize)/40);
+
 s.myUpdate = () => {
     const graphNodes = s.graph.nodes()
     const graphEdges = s.graph.edges()
@@ -148,6 +149,7 @@ s.myUpdate = () => {
         }
     }
 }
+s.myUpdate();
 const order = [];
 for (let i = 0; i < NODENUM; i++) {
   order.push(i);
