@@ -13,6 +13,7 @@ var VisNode = /** @class */ (function () {
         this.edgeDecayReduction = clamp(edgeDecayReduction, 0, 200);
     }
     VisNode.prototype.tick = function () {
+        this.decay();
         this.distributeCharge();
     };
     VisNode.prototype.decay = function () {
@@ -23,8 +24,8 @@ var VisNode = /** @class */ (function () {
         if (this.charge < this.threshold) {
             return this.decayEdges();
         }
-        const witholding = this.threshold/MAXCHARGE;
-        this.charge -= witholding;
+        // const witholding = Math.log(this.charge+1);
+        // this.charge -= witholding;
 
         var remainingEdges = [];
         for (var i = 0; i < this.edges.length; i++) {
@@ -37,7 +38,7 @@ var VisNode = /** @class */ (function () {
             for (var _i = 0, remainingEdges_1 = remainingEdges; _i < remainingEdges_1.length; _i++) {
                 var i = remainingEdges_1[_i];
                 var child = this.children[i];
-                var edge = this.edges[i];
+                var edge = min(this.edges[i], MAXCHARGE - this.children[i].charge);
                 var chargeShare = this.charge / remainingEdges.length;
                 if (chargeShare > edge) {
                     child.charge += edge;
@@ -61,10 +62,10 @@ var VisNode = /** @class */ (function () {
         for (var i = 0; i < edgesToDistribute.length; i++) {
             var edgeIndex = edgesToDistribute[i];
             var target = this.children[edgeIndex];
-            target.charge += chargePortion;
-            this.charge -= chargePortion;
+            target.charge += min(chargePortion, MAXCHARGE-target.charge);
+            this.charge -= min(chargePortion, MAXCHARGE-target.charge);
         }
-        this.charge += witholding
+        // this.charge += witholding
         return this.growEdges();
     };
     VisNode.prototype.decayEdges = function () {

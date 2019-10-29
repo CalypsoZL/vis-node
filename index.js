@@ -1,20 +1,24 @@
 "use strict";
 
+
 let s = new sigma('container');
-const NODENUM = 1500;
-const HEIGHT = 200;
+const NODENUM = 1700;
+const HEIGHT = 250;
 const WIDTH = 350;
 const EDGE_LEN_REDUCTION = 21;
+const MAX_OUTDEGREE = 8;
 let nodes = [];
 let data = { nodes: [], links: [] };
 let threshold = 1;
-let decayRate = 0.9999;
+let decayRate = 0.5;
 const colorspread = -20;
 const colorstart = 0;
 const edgeDecayRate = Math.sqrt(NODENUM/EDGE_LEN_REDUCTION);
+const oneWay = false;
+const noTri = false;
 
-const minNodeSize = 0.5;
-const maxNodeSize = 5;
+const minNodeSize = 0.45;
+const maxNodeSize = 6;
 const minEdgeSize = 0.2;
 const maxEdgeSize = 1.5;
 // nodes.push(new VisNode(threshold, decayRate));
@@ -42,7 +46,9 @@ const maxEdgeSize = 1.5;
 // });
 
 for (let i = 0; i < NODENUM; i++) {
-    let ifire = Math.pow(regularize(i, 0, NODENUM), 0.1);
+  const gamma = clamp(regularize(i % 16 + 1, 0, 16)+0.5, 0.5, 1);
+    const angle = Math.random()*Math.PI*2;
+    let ifire = Math.pow(regularize(Math.random()*NODENUM, 0, NODENUM)*Math.random(), 0.5*Math.random());
     // let threshold = Math.random() * 20+1;
     nodes.push(new VisNode(threshold, Math.random() * decayRate, 1, edgeDecayRate));
     s.graph.addNode({
@@ -50,9 +56,9 @@ for (let i = 0; i < NODENUM; i++) {
         id: i,
         label: i,
         // Display attributes:
-        x: Math.random() * 2 * WIDTH*ifire - WIDTH*ifire,
-        y: Math.random() * 2 * HEIGHT*ifire - HEIGHT*ifire,
-        size: 1,
+        x: Math.cos(angle) * clamp(ifire * WIDTH,Math.pow(WIDTH, 0.5),WIDTH),
+        y: Math.sin(angle) * clamp(ifire * HEIGHT,Math.pow(HEIGHT, 0.5),HEIGHT),
+        size: minNodeSize,
         color: convert(spread(regularize(i, 0, NODENUM), 380-colorspread, 781+colorspread))
     });
 }
@@ -62,10 +68,14 @@ const graphEdges = s.graph.edges();
 const r = diff({x:WIDTH,y:WIDTH}, {x:-HEIGHT, y:-HEIGHT});
 // console.log(r);
 // console.log(graphNodes);
+let edges = 0;
 for (let i = 0; i < nodes.length; i++) {
     for (let j = 0; j < nodes.length; j++) {
-        const distModifier = diff(graphNodes[i], graphNodes[j])*EDGE_LEN_REDUCTION/r;
+        let distModifier = diff(graphNodes[i], graphNodes[j])*EDGE_LEN_REDUCTION/r;
+        // distModifier += Math.pow(clamp(i, 0.1, distModifier), 0.5);
         if (i !== j && Math.random() > distModifier) {
+            if (oneWay && nodes[j].children.includes(nodes[i])) continue;
+            if (noTri && nodes[j].children.reduce((T, n) => T + n.children.includes(nodes[i]), 0)) continue;
             let edgeWeight = Math.random() * 20 * distModifier;
             nodes[i].addConnection(nodes[j], edgeWeight);
             s.graph.addEdge({
@@ -75,9 +85,12 @@ for (let i = 0; i < nodes.length; i++) {
                 size: minEdgeSize,
                 color: "#45b5ac"
             });
+            edges++;
+            if (nodes[i].children.length > MAX_OUTDEGREE) break;
         }
     }
 }
+console.log("edges", edges)
 
 s.settings({
     minNodeSize: minNodeSize,
@@ -86,7 +99,13 @@ s.settings({
     minEdgeSize: minEdgeSize,
     maxEdgeSize: maxEdgeSize,
     defaultEdgeSize: 0,
-    autoRescale: false
+    autoRescale: false,
+    drawLabels: false,
+    drawEdgeLabels: false,
+    doubleClickEnabled: false,
+    zoomingRatio: 1.1,
+    enableHovering: false,
+    eventsEnabled: false
 })
 s.refresh();
 // function update() {
@@ -112,10 +131,10 @@ s.refresh();
 let x = 0;
 const decayInterval = Math.round(Math.pow(nodes.length, 1/4));
 console.log(decayInterval, "decayInterval");
-s.bind('clickNode',(e) => {
-    nodes[e.data.node.id].input(10);
-});
-const nodeMult = ((minNodeSize + maxNodeSize)/4);
+// s.bind('clickNode',(e) => {
+//     nodes[e.data.node.id].input(10);
+// });
+const nodeMult = ((minNodeSize + maxNodeSize)/6);
 const edgeMult = ((minEdgeSize + maxEdgeSize)/40);
 s.myUpdate = () => {
     const graphNodes = s.graph.nodes()
@@ -129,6 +148,31 @@ s.myUpdate = () => {
         }
     }
 }
+const order = [];
+for (let i = 0; i < NODENUM; i++) {
+  order.push(i);
+}
+const stochDistribute = () => {
+  const start = new Date();
+  const graphNodes = s.graph.nodes()
+  const graphEdges = s.graph.edges()
+  // order.sort(() => Math.random() - 0.5);
+  let j = 0;
+  for (let i = 0; i < order.length; i++) {
+      // const j = Math.floor(Math.random() * NODENUM);
+      nodes[i].tick();
+      graphNodes[i].size = clamp((nodes[i].charge + 1)*nodeMult, minNodeSize, maxNodeSize);
+      for (let k = 0; k < nodes[i].edges.length; k++) {
+          graphEdges[j].size = clamp(nodes[i].edges[k] *edgeMult, minEdgeSize, maxEdgeSize);
+          j++;
+      }
+  }
+  if (new Date() - start > 100) console.log(new Date() - start);
+}
+setInterval(() => {
+  stochDistribute();
+}, 100);
+requestAnimationFrame(s.refresh.bind(s));
 // setInterval(() => {
 //     const graphNodes = s.graph.nodes()
 //     const graphEdges = s.graph.edges()
@@ -231,7 +275,7 @@ function spread(n, min, max) {
   return n * (max - min)+min;
 }
 
-function convert(w) {
+function convert(w, gamma=0.8) {
   let red, green, blue, factor;
 
   if (w >= 380 && w < 440) {
@@ -276,7 +320,7 @@ function convert(w) {
   else
     factor = 0.0;
 
-  const gamma = 0.80;
+  // const gamma = 0.80;
   const R = (red > 0 ? 255 * Math.pow(red * factor, gamma) : 0);
   const G = (green > 0 ? 255 * Math.pow(green * factor, gamma) : 0);
   const B = (blue > 0 ? 255 * Math.pow(blue * factor, gamma) : 0);

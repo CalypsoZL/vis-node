@@ -37,9 +37,9 @@
         function handleFileSelect(evt) {
             const files = evt.target.files; // FileList object
             let i = 0;
-            loading = setInterval(() => {
-                nodes[i++ % nodes.length].input(5);
-            }, 300);
+            // loading = setInterval(() => {
+            //     nodes[i++ % nodes.length].input(5);
+            // }, 100);
             clearInterval(interval)
             // files is a FileList of File objects. List some properties.
             const output = [];
@@ -113,9 +113,9 @@
                 const speed = 100;
                 let increment = Math.floor(bins / nodes.length);
                 const run = () => {
-                    s.myUpdate();
-                    nodes.forEach(node => node.decay());
-                    nodes.forEach(node => node.distributeCharge());
+                    // s.myUpdate();
+                    // nodes.forEach(node => node.decay());
+                    // nodes.forEach(node => node.distributeCharge());
                     this.analyser.getFloatFrequencyData(this.dataArray);
 
                     for (let i = 0; i < min(bins, nodes.length); i++) {
@@ -153,7 +153,7 @@
                 //     // console.log(nodes[0].charge, nodes[1].charge);
                 //     if (i >= totalPeaks) clearInterval(interval);
                 // };
-                clearInterval(loading);
+                // clearInterval(loading);
                 // aud.onpause = () => {
                 //     clearInterval(interval);
                 // };
