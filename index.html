@@ -52,9 +52,9 @@
             // files is a FileList of File objects. List some properties.
             const output = [];
             for (let i = 0, f; f = files[i]; i++) {
-                if (f.type !== "audio/mp3") {
-                    continue;
-                }
+//                 if (f.type !== "audio/mp3") {
+//                     continue;
+//                 }
                 const aud = document.getElementById("audio-element");
                 aud.src = window.URL.createObjectURL(f);
                 var audio = new Aud(f);
